@@ -1,0 +1,101 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>中国地图</title>
+</head>
+<style>
+    .MyText {
+        fill: red;
+        text-anchor: middle;
+        font-size: 10px;
+    }
+</style>
+<body>
+<script src="d3.js"></script>
+<script>
+    var width = 1000;
+    var height = 1000;
+
+    var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(0,0)");
+
+    //使用投影函数转换经纬度  墨卡托投影方式
+    //center() 设定地图的中心位置，[107,31] 指的是经度和纬度。这个位置是四川达州渠县
+    //scale() 设定放大的比例。
+    //translate() 设定平移。
+    var projection = d3.geoMercator()
+            .center([107, 31])
+            .scale(850)
+            .translate([width / 2, height / 2]);
+
+    //地理路径生成器，设定生成器的投影函数
+    var path = d3.geoPath()
+            .projection(projection);
+
+    //用一个空域和指定范围来构造一个新的 ordinal scale，相当于是离散函数 [0, 1,...]对应[#xxxxxx, #yyyyyy,...]
+    //d3.schemeCategory20是一个有20种分类颜色的数组
+    //color为生成16进制颜色数值的函数，参数每隔20个颜色循环一次
+    var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+    d3.json("mapdata/china.json", function (error, root) {
+
+        if (error)
+            return console.error(error);
+
+        svg.selectAll("path")
+                .data(root.features)
+                //enter选中数据有而html中没有的部分
+                .enter()
+                .append("path")
+                .attr("stroke", function (d, i) {
+                    return color(i)
+                })
+                .attr("stroke-width", 1)
+                .attr("fill", function (d, i) {
+                    return color(i);
+                })
+                //定义path的d属性，也就是路径属性
+                .attr("d", path)
+                .on("mouseover", function (d, i) {
+                    d3.select(this)
+                            .attr("fill", "yellow");
+                })
+                .on("mouseout", function (d, i) {
+                    d3.select(this)
+                            .attr("fill", color(i));
+                });
+
+
+        var paths = Array.from(document.querySelectorAll("path"));
+
+        svg.selectAll('.MyText')
+                .data(root.features)
+                .enter()
+                .append('text')
+                .attr('class', 'MyText')
+                .attr('transform', function (d, i) {
+                    var centroid = path.centroid(d3.select(paths[i]).datum());
+                    return `translate(${centroid[0]} ${centroid[1]})`;
+                })
+                .text(function (d, i) {
+                    return d.properties.name;
+                })
+                .on("mouseover", function (d, i) {
+                    d3.select(paths[i]).attr("fill", 'yellow');
+                })
+                .on("mouseout", function (d, i) {
+                    d3.select(paths[i])
+                            .attr("fill", color(i));
+                });
+
+
+    });
+
+
+</script>
+
+</body>
+</html>  
